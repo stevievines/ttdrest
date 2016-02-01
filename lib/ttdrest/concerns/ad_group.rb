@@ -1,7 +1,6 @@
 module Ttdrest
   module Concerns
     module AdGroup
-
       def get_ad_groups(campaign_id, options = {})
         path = "/adgroups/#{campaign_id}"
         params = {}
@@ -15,7 +14,7 @@ module Ttdrest
         result = get(path, params)
         return result
       end
-      
+
       def create_ad_group(campaign_id, name, budget_in_dollars, daily_budget_in_dollars, pacing_enabled, base_bid_cpm_in_dollars, max_bid_cpm_in_dollars, creative_ids = [], options = {})
         path = "/adgroup"
         content_type = 'application/json'
@@ -41,6 +40,11 @@ module Ttdrest
       end
       
       def build_ad_group_data(ad_group_id, campaign_id, name, budget_in_dollars, daily_budget_in_dollars, pacing_enabled, base_bid_cpm_in_dollars, max_bid_cpm_in_dollars, creative_ids = [], params = {})
+        if !params[:currency_code].nil?
+          currency_code = params[:currency_code]
+        else
+          currency_code = "USD"
+        end
         # Build main ad group data hash
         ad_group_data = {}
         if !ad_group_id.nil?
@@ -52,21 +56,6 @@ module Ttdrest
         if !name.nil?
           ad_group_data = ad_group_data.merge({"AdGroupName" => name})
         end
-        if !budget_in_dollars.nil?
-          ad_group_data = ad_group_data.merge({"BudgetInUSDollars" => budget_in_dollars})
-        end
-        if !daily_budget_in_dollars.nil?
-          ad_group_data = ad_group_data.merge({"DailyBudgetInUSDollars" => daily_budget_in_dollars})
-        end
-        if !pacing_enabled.nil?
-          ad_group_data = ad_group_data.merge({"PacingEnabled" => pacing_enabled})
-        end
-        if !base_bid_cpm_in_dollars.nil?
-          ad_group_data = ad_group_data.merge({"BaseBidCPMInUSDollars" => base_bid_cpm_in_dollars})
-        end
-        if !max_bid_cpm_in_dollars.nil?
-          ad_group_data = ad_group_data.merge({"MaxBidCPMInUSDollars" => max_bid_cpm_in_dollars})
-        end
         if !params[:description].nil?
           ad_group_data = ad_group_data.merge({"Description" => params[:description]})
         end
@@ -76,56 +65,78 @@ module Ttdrest
         if !params[:industry_category_id].nil?
           ad_group_data = ad_group_data.merge({"IndustryCategoryId" => params[:industry_category_id]})
         end
+        if !params[:availability].nil?
+          ad_group_data = ad_group_data.merge({"Availability" => params[:availability]})
+        end
         
         # Build RTB ad group data hash
         rtb_ad_group_data = {}
+        budget_data = {}
         if !budget_in_dollars.nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"BudgetInUSDollars" => budget_in_dollars})
+          budget_data = budget_data.merge({"Budget" => {"Amount" => budget_in_dollars, "CurrencyCode" => currency_code}})
+        end
+        if !params[:budget_in_impressions].nil?
+          budget_data = budget_data.merge({"BudgetInImpressions" => params[:budget_in_impressions]})
         end
         if !daily_budget_in_dollars.nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"DailyBudgetInUSDollars" => daily_budget_in_dollars})
+          budget_data = budget_data.merge({"DailyBudget" => {"Amount" => daily_budget_in_dollars, "CurrencyCode" => currency_code}})
+        end
+        if !params[:daily_budget_in_impressions].nil?
+          budget_data = budget_data.merge({"DailyBudgetInImpressions" => params[:daily_budget_in_impressions]})
         end
         if !pacing_enabled.nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"PacingEnabled" => pacing_enabled})
+          budget_data = budget_data.merge({"PacingEnabled" => pacing_enabled})
+        end
+        if !budget_data.empty?
+          rtb_ad_group_data = rtb_ad_group_data.merge({"BudgetSettings" => budget_data})
         end
         if !base_bid_cpm_in_dollars.nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"BaseBidCPMInUSDollars" => base_bid_cpm_in_dollars})
+          rtb_ad_group_data = rtb_ad_group_data.merge({"BaseBidCPMInUSDollars" => {"Amount" => base_bid_cpm_in_dollars, "CurrencyCode" => currency_code}})
         end
         if !max_bid_cpm_in_dollars.nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"MaxBidCPMInUSDollars" => max_bid_cpm_in_dollars})
+          rtb_ad_group_data = rtb_ad_group_data.merge({"MaxBidCPMInUSDollars" => {"Amount" => max_bid_cpm_in_dollars, "CurrencyCode" => currency_code}})
         end
         if !creative_ids.empty? 
           rtb_ad_group_data = rtb_ad_group_data.merge({"CreativeIds" => creative_ids})
         end
-        if !params[:frequency_pricing_slope].nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"FrequencyPricingSlope" => params[:frequency_pricing_slope]})
-        end
-        if !params[:frequency_period_in_minutes].nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"FrequencyPeriodInMinutes" => params[:frequency_period_in_minutes]})
-        end
-        if !params[:frequency_cap].nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"FrequencyCap" => params[:frequency_cap]})
-        end
         if !params[:site_list_ids].nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"SiteListIds" => params[:site_list_ids]})
+          site_targeting_data = {"SiteListIds" => params[:site_list_ids]}
+          if !params[:site_list_fall_through_adjustment].nil?
+            site_targeting_data = site_targeting_data.merge({"SiteListFallThroughAdjustment" => params[:site_list_fall_through_adjustment]})
+          end
+          rtb_ad_group_data = rtb_ad_group_data.merge({"SiteTargeting" => site_targeting_data})
         end
-        if !params[:site_list_fall_through_adjustment].nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"SiteListFallThroughAdjustment" => params[:site_list_fall_through_adjustment]})
-        end
+        fold_data = {}
         if !params[:above_fold_adjustment].nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"AboveFoldAdjustment" => params[:above_fold_adjustment]})
+          fold_data = fold_data.merge({"AboveFoldAdjustment" => params[:above_fold_adjustment]})
         end
         if !params[:below_fold_adjustment].nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"BelowFoldAdjustment" => params[:below_fold_adjustment]})
+          fold_data = fold_data.merge({"BelowFoldAdjustment" => params[:below_fold_adjustment]})
         end
         if !params[:unknown_fold_adjustment].nil?
-          rtb_ad_group_data = rtb_ad_group_data.merge({"UnknownFoldAdjustment" => params[:unknown_fold_adjustment]})
+          fold_data = fold_data.merge({"UnknownFoldAdjustment" => params[:unknown_fold_adjustment]})
+        end
+        if !fold_data.empty?
+          rtb_ad_group_data = rtb_ad_group_data.merge({"FoldTargeting" => fold_data})
         end
         if !params[:budget_in_impressions].nil?
           rtb_ad_group_data = rtb_ad_group_data.merge({"BudgetInImpressions" => params[:budget_in_impressions]})
         end
         if !params[:daily_budget_in_impressions].nil?
           rtb_ad_group_data = rtb_ad_group_data.merge({"DailyBudgetInImpressions" => params[:daily_budget_in_impressions]})
+        end
+        frequency_data = {}
+        if !params[:frequency_pricing_slope].nil?
+          frequency_data = frequency_data.merge({"FrequencyPricingSlopeCPM" => {"Amount" => params[:frequency_pricing_slope], "CurrencyCode" => currency_code}})
+        end
+        if !params[:frequency_period_in_minutes].nil?
+          frequency_data = frequency_data.merge({"FrequencyPeriodInMinutes" => params[:frequency_period_in_minutes]})
+        end
+        if !params[:frequency_cap].nil?
+          frequency_data = frequency_data.merge({"FrequencyCap" => params[:frequency_cap]})
+        end
+        if !frequency_data.empty?
+          rtb_ad_group_data = rtb_ad_group_data.merge({"FrequencySettings" => frequency_data})
         end
         if !params[:audience_id].nil?
           # Build audience data hash
@@ -148,12 +159,21 @@ module Ttdrest
           rtb_ad_group_data = rtb_ad_group_data.merge({"GeoSegmentAdjustments" => params[:geo_segment_adjustments]})
         end
         #TODO: AdFormatAdjustments 
-        #TODO: UserHourOfWeekAdjustments 
+        #TODO: ROIGoal
+        #TODO: UserTimeTargeting 
         #TODO: SupplyVendorAdjustments 
         #TODO: BrowserAdjustments 
         #TODO: OSAdjustments 
         #TODO: OSFamilyAdjustments 
-        #TODO: DeviceTypeAdjustments 
+        #TODO: DeviceTypeAdjustments
+        #TODO: RenderingContextAdjustments
+        #TODO: AutoOptimizationSettings
+        #TODO: ContractTargeting
+        #TODO: VideoTargeting
+        #TODO: SiteQualitySettings
+        #TODO: NielsenSettings
+        #TODO: ComscoreSettings
+        #TODO: LanguageTargeting
         
         if !rtb_ad_group_data.empty?
           ad_group_data = ad_group_data.merge({"RTBAttributes" => rtb_ad_group_data})
